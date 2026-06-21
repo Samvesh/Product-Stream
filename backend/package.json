@@ -14,11 +14,10 @@
     "test:pagination": "node tests/pagination-test.js"
   },
   "dependencies": {
+    "@faker-js/faker": "^8.4.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "pg": "^8.11.3"
-  },
-  "devDependencies": {
-    "@faker-js/faker": "^8.4.1"
   }
 }
