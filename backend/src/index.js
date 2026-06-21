@@ -27,11 +27,15 @@ const allowedOrigins = [
   'http://localhost:4173',            // Vite preview
 ].filter(Boolean); // remove undefined entries
 
+const allowAllOrigins = process.env.FRONTEND_URL === '*';
+
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g. curl, Postman, server-to-server)
       if (!origin) return callback(null, true);
+      // If FRONTEND_URL is '*', allow every origin
+      if (allowAllOrigins) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error(`CORS: origin "${origin}" not allowed`));
     },
