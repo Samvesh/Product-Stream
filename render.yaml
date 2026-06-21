@@ -1,0 +1,20 @@
+# render.yaml — Render Blueprint for the backend web service
+# Deploy this repo to Render → New → Blueprint → point to this repo.
+# Render will automatically detect this file and configure the service.
+
+services:
+  - type: web
+    name: product-streamer-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false   # Set manually in Render dashboard (your Neon pooled URL)
+      - key: FRONTEND_URL
+        sync: false   # Set manually (your Vercel or Render static site URL)
+    healthCheckPath: /api/health
+    autoDeploy: true

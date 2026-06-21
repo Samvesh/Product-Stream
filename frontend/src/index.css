@@ -1,0 +1,324 @@
+/* ====================================================================
+   index.css — Design system for Product Streamer
+   ==================================================================== */
+
+/* ---------- Reset & base ------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0f1117;
+  --bg-card:     #1a1d27;
+  --bg-card-hov: #1f2335;
+  --border:      #2a2d3e;
+  --accent:      #6c63ff;
+  --accent-2:    #a78bfa;
+  --text:        #e2e8f0;
+  --text-muted:  #8892a4;
+  --green:       #34d399;
+  --yellow:      #fbbf24;
+  --red:         #f87171;
+  --radius:      12px;
+  --shadow:      0 4px 24px rgba(0,0,0,0.4);
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Layout ------------------------------------------------- */
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ---------- Header ------------------------------------------------- */
+.header {
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.header-logo {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 30%, var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header-sub {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(108,99,255,0.15);
+  border: 1px solid rgba(108,99,255,0.3);
+  color: var(--accent-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  margin-top: 10px;
+}
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity:1; } 50% { opacity:0.3; }
+}
+
+/* ---------- Controls bar ------------------------------------------ */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.controls-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.select-wrapper {
+  position: relative;
+  flex: 0 0 auto;
+}
+.select-wrapper::after {
+  content: '▾';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  font-size: 12px;
+}
+select {
+  appearance: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 36px 9px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  min-width: 180px;
+}
+select:hover { border-color: var(--accent); }
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(108,99,255,0.2);
+}
+
+.stats-pill {
+  margin-left: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.stats-pill span { color: var(--text); font-weight: 600; }
+
+/* ---------- Product grid ------------------------------------------ */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+/* ---------- Product card ------------------------------------------ */
+.product-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  cursor: default;
+}
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: rgba(108,99,255,0.4);
+}
+.product-category {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  width: fit-content;
+}
+.product-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  flex: 1;
+}
+.product-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+.product-price {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--green);
+}
+.product-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Category colour map ----------------------------------- */
+.cat-electronics     { background: rgba(99,179,237,0.1); border-color: rgba(99,179,237,0.4); color: #63b3ed; }
+.cat-clothing        { background: rgba(252,129,205,0.1); border-color: rgba(252,129,205,0.4); color: #fc81cd; }
+.cat-home-garden     { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.4); color: #34d399; }
+.cat-sports-outdoors { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.4); color: #fbbf24; }
+.cat-books           { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.4); color: #a78bfa; }
+.cat-toys-games      { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.4); color: #f87171; }
+.cat-health-beauty   { background: rgba(236,72,153,0.1); border-color: rgba(236,72,153,0.4); color: #ec4899; }
+.cat-automotive      { background: rgba(251,146,60,0.1); border-color: rgba(251,146,60,0.4); color: #fb923c; }
+.cat-food-grocery    { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.4); color: #4ade80; }
+.cat-office-supplies { background: rgba(148,163,184,0.1); border-color: rgba(148,163,184,0.4); color: #94a3b8; }
+.cat-default         { background: rgba(108,99,255,0.1); border-color: rgba(108,99,255,0.4); color: var(--accent-2); }
+
+/* ---------- Load more / sentinel ---------------------------------- */
+.load-more-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 0 20px;
+}
+.btn-load-more {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 12px 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+  letter-spacing: 0.02em;
+}
+.btn-load-more:hover { opacity: 0.9; transform: scale(1.02); }
+.btn-load-more:active { transform: scale(0.98); }
+.btn-load-more:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.load-more-sub { font-size: 0.8rem; color: var(--text-muted); }
+
+/* Intersection sentinel (invisible, triggers auto-load) */
+.sentinel { height: 1px; }
+
+/* ---------- States ------------------------------------------------ */
+.state-loading,
+.state-empty,
+.state-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.state-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.state-error { color: var(--red); }
+.state-error .error-icon { font-size: 2.5rem; }
+.state-empty .empty-icon { font-size: 2.5rem; }
+
+/* Inline loading indicator (bottom of list while fetching next page) */
+.inline-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.inline-loader .mini-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ---------- End-of-results banner --------------------------------- */
+.end-banner {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}
+.end-banner strong { color: var(--text); }
+
+/* ---------- Responsive -------------------------------------------- */
+@media (max-width: 600px) {
+  .product-grid { grid-template-columns: 1fr; }
+  .controls { gap: 10px; }
+  select { min-width: unset; width: 100%; }
+  .stats-pill { margin-left: 0; }
+}
