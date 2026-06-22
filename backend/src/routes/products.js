@@ -96,7 +96,7 @@ router.get('/products', async (req, res) => {
     // Parse and cap limit (prevent abuse with huge page sizes)
     let limit = parseInt(req.query.limit, 10);
     if (isNaN(limit) || limit < 1) limit = 20;
-    if (limit > 100) limit = 100; // hard cap
+    if (limit > 150) limit = 150; // hard cap
 
     const { category, cursor: cursorParam } = req.query;
 

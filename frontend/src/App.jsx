@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getProducts, getCategories } from './api';
 import ProductList from './components/ProductList';
 
-const PAGE_SIZE = 24; // products per page
+const PAGE_SIZE = 120; // products per page
 
 export default function App() {
   // ---- Category state ----
@@ -147,9 +147,32 @@ export default function App() {
         </div>
 
         {allProducts.length > 0 && (
-          <div className="stats-pill">
-            Showing <span>{displayedProducts.length.toLocaleString()}</span> of <span>{allProducts.length.toLocaleString()}</span> loaded products
-            {selectedCategory && ` in ${selectedCategory}`}
+          <div className="stats-container">
+            {selectedCategory ? (
+              <div className="stats-pill">
+                Showing <span>{displayedProducts.length.toLocaleString()}</span> of <span>{allProducts.length.toLocaleString()}</span> loaded products
+                {selectedCategory && ` in ${selectedCategory}`}
+              </div>
+            ) : (
+              <div className="stats-unfiltered">
+                <div className="stats-main-line">
+                  Showing <span>{allProducts.length.toLocaleString()}</span> out of <span>200,000</span> total products
+                </div>
+                <div className="stats-sub-line">
+                  Load more to get more products
+                </div>
+                {hasMore && (
+                  <button
+                    className="btn-load-more-small"
+                    onClick={handleLoadMore}
+                    disabled={loading}
+                    aria-label="Load more products"
+                  >
+                    {loading ? 'Loading...' : 'Load More'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

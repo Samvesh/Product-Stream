@@ -151,8 +151,10 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(108,99,255,0.2);
 }
 
-.stats-pill {
+.stats-container {
   margin-left: auto;
+}
+.stats-pill {
   background: var(--bg-card);
   border: 1px solid var(--border);
   padding: 8px 16px;
@@ -162,6 +164,51 @@ select:focus {
   white-space: nowrap;
 }
 .stats-pill span { color: var(--text); font-weight: 600; }
+
+.stats-unfiltered {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.stats-main-line {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.stats-main-line span {
+  color: var(--text);
+  font-weight: 600;
+}
+.stats-sub-line {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+.btn-load-more-small {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+  margin-top: 2px;
+}
+.btn-load-more-small:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+.btn-load-more-small:active {
+  transform: scale(0.98);
+}
+.btn-load-more-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
 
 /* ---------- Product grid ------------------------------------------ */
 .product-grid {
@@ -326,4 +373,6 @@ select:focus {
   .controls { gap: 10px; }
   select { min-width: unset; width: 100%; }
   .stats-pill { margin-left: 0; }
+  .stats-container { margin-left: 0; }
+  .stats-unfiltered { align-items: flex-start; }
 }
