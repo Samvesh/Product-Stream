@@ -1,31 +1,34 @@
 # Product Streamer
 
-Browse 200,000 products with fast, stable cursor-based pagination.
-
-**Live URLs**
-- 🚀 **Frontend**: `https://YOUR-FRONTEND.vercel.app` ← update after deploy
-- 🔌 **Backend API**: `https://product-streamer-api.onrender.com` ← update after deploy
-- 💾 **Database**: Neon Postgres (hosted, free tier)
+A backend system for browsing ~200,000 products with fast pagination that stays correct even when data is changing underneath it. Built with Node.js, Postgres (Neon), and a simple React frontend.
 
 ---
 
-## What is Keyset (Cursor) Pagination, and why use it?
+## Why I built it this way
 
-### The problem with OFFSET pagination
+The task said "pagination should be fast" and "if 50 new products are added while someone is browsing, they must not see the same product twice or miss one." That second requirement is actually the interesting one — it rules out the obvious approach entirely.
 
-The most naive way to paginate is:
+### The obvious approach (OFFSET) and why it breaks
+
+When I first thought about this, the natural instinct is:
+
 ```sql
 SELECT * FROM products ORDER BY created_at DESC LIMIT 20 OFFSET 10000;
 ```
-**Why this is bad:**
-1. **Slow at depth** — Postgres must scan and discard 10,000 rows before returning 20. Page 500 is 500× slower than page 1.
-2. **Unstable under writes** — if a new product is inserted while you're on page 3, every row shifts by one. You'll see a duplicate on page 4 (a row you already saw) or skip one entirely.
 
-### Keyset pagination (what this project uses)
+This works fine for small datasets. But there are two real problems with it at scale:
 
-Instead of saying "skip N rows", we say **"give me rows that come *after* the last item I saw"**. We track position using the last row's `(created_at, id)` pair as a *cursor*.
+**Problem 1 — It gets slower the deeper you go.** Postgres has to scan and throw away 10,000 rows just to give you 20. Page 1 is fast. Page 500 is 500x slower. With 200k rows and people potentially scrolling deep, this is a real issue.
 
-**First page:**
+**Problem 2 — It breaks when data changes.** Say someone is on page 3. A new product gets inserted. Now every row has shifted by one position. When that user loads page 4, they'll either see a product they already saw on page 3, or miss one entirely. There's no way to fix this with OFFSET — it's a fundamental problem with the approach.
+
+### What I did instead — keyset (cursor) pagination
+
+The idea is simple once you see it: instead of saying "skip 10,000 rows", you say "give me rows that come *after* the last item I saw."
+
+You use the last product's `created_at` and `id` as a cursor — a bookmark into the dataset.
+
+**First page — no cursor, just fetch newest:**
 ```sql
 SELECT id, name, category, price, created_at
 FROM products
@@ -33,197 +36,162 @@ ORDER BY created_at DESC, id DESC
 LIMIT 20;
 ```
 
-**Subsequent pages** (cursor = last row's `created_at` + `id`):
+**Every page after that — use the cursor:**
 ```sql
 SELECT id, name, category, price, created_at
 FROM products
-WHERE (created_at, id) < (:cursor_created_at, :cursor_id)
+WHERE (created_at, id) < ($1, $2)   -- "after the last thing I saw"
 ORDER BY created_at DESC, id DESC
 LIMIT 20;
 ```
 
-**Why use both `created_at` AND `id`?**
-`created_at` is not unique — two products can share an identical timestamp. Adding `id` as a tiebreaker makes every cursor position guaranteed unique. The composite index `(created_at DESC, id DESC)` makes this an O(log N) seek.
+The `WHERE (created_at, id) < (...)` is doing a row comparison — Postgres evaluates it left to right, so it means "either `created_at` is older, OR `created_at` is the same AND `id` is smaller." With a composite index on `(created_at DESC, id DESC)`, this is an O(log N) index seek regardless of how deep you are. Page 5,000 is just as fast as page 1.
 
-**Why is this stable under concurrent writes?**
-Newly inserted products get a fresh timestamp (newer than our cursor). They land *above* our current position in the sort order — in pages the user has already passed. They never appear between two pages we haven't visited yet. Result: **zero skips, zero duplicates**, no matter how many products are inserted mid-pagination.
+**Why both `created_at` AND `id`?** Because `created_at` isn't unique — two products inserted at nearly the same time can have identical timestamps. If you only cursor on `created_at`, you'd have an ambiguous position. Adding `id` (which is a UUID and always unique) as a tiebreaker eliminates this.
 
-The cursor itself is opaque to the client — it's just `base64(created_at|uuid)` — so clients can't accidentally construct invalid cursors.
+**Why this is stable under concurrent writes:** New products get the current timestamp when they're inserted. That timestamp is newer than wherever your cursor currently is. So they land above your current scroll position — in pages you've already seen. They never "push" anything between two pages you haven't visited yet. This is why 0 duplicates and 0 skips is guaranteed by the design, not just a lucky test result.
+
+I verified this with an actual test (more on that below).
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
 Product-Streamer/
 ├── backend/
 │   ├── src/
-│   │   ├── db.js              # pg Pool (uses Neon pooled connection string)
-│   │   ├── index.js           # Express app, CORS, routing
-│   │   └── routes/products.js # All API endpoints + pagination logic
+│   │   ├── db.js              # pg Pool setup — uses Neon's pooled connection
+│   │   ├── index.js           # Express app, CORS, mounts routes
+│   │   └── routes/products.js # the actual pagination logic lives here
 │   ├── scripts/
-│   │   ├── migrate.js         # Creates table + indexes
-│   │   └── seed.js            # Inserts 200k fake products (bulk batches)
+│   │   ├── migrate.js         # creates the table and indexes
+│   │   └── seed.js            # generates and inserts 200k products
 │   ├── tests/
-│   │   └── pagination-test.js # Concurrent-write correctness test
+│   │   └── pagination-test.js # concurrent-write correctness test
 │   └── package.json
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx            # Root component, state management
-│   │   ├── api.js             # fetch wrappers
+│   │   ├── App.jsx
+│   │   ├── api.js
 │   │   └── components/
 │   │       ├── ProductCard.jsx
-│   │       ├── ProductList.jsx   # IntersectionObserver infinite scroll
+│   │       ├── ProductList.jsx    # infinite scroll with IntersectionObserver
 │   │       └── CategoryFilter.jsx
 │   └── package.json
-├── render.yaml                # Render Blueprint (backend deploy config)
+├── render.yaml
 └── README.md
 ```
 
 ---
 
-## Local Setup
+## Running it locally
 
-### Prerequisites
-- Node.js ≥ 18
-- A [Neon](https://neon.tech) Postgres database (free, no credit card)
+### What you need
+- Node.js 18+
+- A Neon account (free, no credit card) — or any Postgres database honestly
 
-### 1. Clone and install
+### Setup
 
 ```bash
 git clone https://github.com/Samvesh/Product-Stream
 cd Product-Stream
 
-# Install backend deps
 cd backend && npm install
-
-# Install frontend deps (separate terminal)
 cd ../frontend && npm install
 ```
-
-### 2. Configure environment
 
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env — paste your Neon POOLED connection string as DATABASE_URL
-# Also set FRONTEND_URL (can be http://localhost:5173 for local dev)
+# open .env and paste your Neon connection string as DATABASE_URL
+# important: use the POOLED string (hostname has -pooler in it)
+# also set FRONTEND_URL=http://localhost:5173 for local dev
 ```
 
-> **Neon tip**: Use the **pooled** connection string (hostname contains `-pooler`).  
-> Found in: Neon Dashboard → Project → Connection Details → toggle "Pooled connection".
-
-### 3. Run migrations (creates table + indexes)
+### Create the table and indexes
 
 ```bash
 cd backend
 npm run migrate
 ```
 
-Expected output:
+You should see something like:
 ```
 Running migrations...
-  ✓ Table "products" created (or already exists)
-  ✓ Index "idx_products_created_at_id" created
-  ✓ Index "idx_products_category_created_at_id" created
-
-Migrations complete!
+  ✓ Table "products" created
+  ✓ Index on (created_at DESC, id DESC) created
+  ✓ Index on (category, created_at DESC, id DESC) created
+Done.
 ```
 
-### 4. Seed the database (200k products)
+### Seed 200k products
 
 ```bash
-cd backend
 npm run seed
 ```
 
-Expected output (takes ~20–60s depending on connection):
+This takes around 30-60 seconds depending on your connection. It inserts in batches of 1,000 rows at a time — not one row at a time in a loop (that would take forever). So it's doing 200 INSERT statements instead of 200,000. Big difference in speed.
+
 ```
 Seeding 200,000 products in batches of 1,000...
-  10,000 / 200,000 inserted (3.2s elapsed)
-  20,000 / 200,000 inserted (6.1s elapsed)
+  10,000 / 200,000 (4.1s)
+  20,000 / 200,000 (7.8s)
   ...
-  200,000 / 200,000 inserted (52.4s elapsed)
-
-Seed complete! 200,000 products inserted in 52.4s.
+  200,000 / 200,000 (54.2s)
+Done.
 ```
 
-**Why it's fast**: Instead of 200,000 individual INSERT statements (one per row), the seed script builds 200 bulk INSERT statements, each inserting 1,000 rows at once:
-```sql
-INSERT INTO products (name, category, price, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5), ($6,$7,$8,$9,$10), ...   -- 1,000 rows
-```
-This reduces DB round-trips from 200,000 → 200.
-
-### 5. Start the backend
+### Start the servers
 
 ```bash
-cd backend
-npm run dev   # hot-reload via node --watch
+# terminal 1
+cd backend && npm run dev
+
+# terminal 2
+cd frontend && npm run dev
 ```
 
-### 6. Start the frontend
-
-```bash
-cd frontend
-npm run dev   # Vite dev server at http://localhost:5173
-```
-
-The Vite dev proxy routes `/api` → `http://localhost:3001`, so no CORS issues locally.
+Frontend runs at `http://localhost:5173`. The Vite proxy handles `/api` → backend so you don't have to deal with CORS locally.
 
 ---
 
-## API Reference
+## API
 
-All endpoints return JSON. The base URL is `/api`.
+Base URL: `/api`
 
 ### `GET /api/health`
-
-Simple health check. Render pings this to confirm the service is alive.
-
-**Response:**
+Just a health check.
 ```json
-{ "status": "ok", "db": "connected", "timestamp": "2025-01-15T10:30:00.000Z" }
+{ "status": "ok", "db": "connected" }
 ```
-
----
 
 ### `GET /api/categories`
-
-Returns the distinct list of product categories (for the filter dropdown).
-
-**Response:**
+Returns the list of categories for the dropdown.
 ```json
-{ "data": ["Automotive", "Books", "Clothing", "Electronics", "..."] }
+{ "data": ["Automotive", "Books", "Clothing", "Electronics", ...] }
 ```
-
----
 
 ### `GET /api/products`
 
-Returns a page of products in `created_at DESC, id DESC` order.
+| param | default | notes |
+|-------|---------|-------|
+| `limit` | 20 | capped at 100 |
+| `cursor` | — | omit for first page, use `nextCursor` from previous response for subsequent pages |
+| `category` | — | optional filter |
 
-**Query Parameters:**
-
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `limit` | number | `20` | Products per page. Capped at `100` to prevent abuse. |
-| `cursor` | string | — | The `nextCursor` from the previous response. Omit for the first page. |
-| `category` | string | — | Filter to a specific category (e.g. `Electronics`). |
-
-**First page:**
+First page:
 ```
 GET /api/products?limit=24
 GET /api/products?limit=24&category=Electronics
 ```
 
-**Subsequent pages:**
+Next pages:
 ```
-GET /api/products?limit=24&cursor=MjAyNS0wMS0xNVQxMDozMDowMC4wMDBafDM4ZWYu...
-GET /api/products?limit=24&category=Electronics&cursor=MjAyNS0wMS0xNVQx...
+GET /api/products?limit=24&cursor=MjAyNS0wMS0x...
 ```
 
-**Response:**
+Response:
 ```json
 {
   "data": [
@@ -235,102 +203,82 @@ GET /api/products?limit=24&category=Electronics&cursor=MjAyNS0wMS0xNVQx...
       "created_at": "2025-01-15T10:30:00.000Z"
     }
   ],
-  "nextCursor": "MjAyNS0wMS0xNVQxMDozMDowMC4wMDBafDM4ZWYy..."
+  "nextCursor": "MjAyNS0wMS0x..."
 }
 ```
 
-`nextCursor` is `null` when there are no more pages.
+`nextCursor` is `null` on the last page. The cursor is just `base64(created_at|id)` — encoded so the client treats it as opaque and doesn't try to construct their own.
 
-**Error responses:**
-
-| Status | Condition |
-|--------|-----------|
-| `400` | Invalid cursor format |
-| `400` | Invalid category value |
-| `500` | Database or server error |
+Errors: `400` for bad cursor or invalid category, `500` for anything else.
 
 ---
 
-## Pagination Correctness Test
+## Correctness test
 
-Tests that concurrent writes don't cause duplicates or skipped items.
+This was the part I spent the most time thinking through. The task specifically said data might change while someone is browsing — I wanted to actually prove the pagination handles it, not just assume it does.
 
 ```bash
 cd backend
-# Start the backend first (npm run dev), then in another terminal:
 npm run test:pagination
 ```
 
-**What the test does:**
-1. Pages through all 200,000 products (page by page)
-2. After page 5, inserts 50 new products (simulating real-time writes)
-3. After page 10, inserts 50 more
-4. Finishes all pages, verifies:
-   - Zero duplicate IDs across all pages
-   - The 100 newly inserted rows did NOT disrupt pagination (they got fresh timestamps → landed at the top, above the cursor → not visible in the current session)
+What the test does:
+- Pages through 20,000 products (1,000 pages)
+- After page 5, inserts 50 new products into the database while pagination is still running
+- After page 10, inserts 50 more
+- At the end, checks that every product ID is unique and the count matches exactly
 
-**Expected result:**
+Actual output from running it:
+
 ```
-=== Pagination Correctness Test ===
+=== Pagination Correctness Test (Quick: 1000 pages) ===
+Database connection pool ready
+Products in DB: 200,100
+Will paginate 1000 pages × 20 = 20,000 products
 
-Products in DB before test: 200,000
   [page 5] Simulating concurrent write...
   [concurrent write] Inserted 50 new products
   [page 10] Simulating second concurrent write...
   [concurrent write] Inserted 50 new products
+  Page 100: fetched 2,000 unique products
+  Page 200: fetched 4,000 unique products
   ...
-  Page 10000: fetched 200,000 so far
+  Page 1000: fetched 20,000 unique products
 
 --- Results ---
-Pages traversed:        10000
-Unique products seen:   200,000
-Products before test:   200,000
+Pages traversed:        1,000
+Unique products seen:   20,000
+Expected:               20,000
+Duplicates found:       0
+Skips (missing rows):   0
+Time elapsed:           554.9s
 
-✅ PASS — No duplicates. No skips. Concurrent inserts did not affect pagination.
+✅ PASS — No duplicates. No skips. Concurrent inserts (100 new rows) did NOT affect pagination.
 ```
+
+The reason this passes is what I explained above — new inserts get current timestamps, which places them above the cursor, not between pages being actively paginated. It's a property of the design, so it holds at any scale.
 
 ---
 
 ## Deployment
 
 ### Backend → Render
-
-1. Push this repo to GitHub
-2. Go to [render.com](https://render.com) → New → Blueprint → connect your repo
-3. Render reads `render.yaml` automatically
-4. In the Render dashboard, set these environment variables:
-   - `DATABASE_URL` — your Neon **pooled** connection string
-   - `FRONTEND_URL` — your Vercel frontend URL (set after frontend deploy)
-5. Deploy. After deploy, run migrations:
-   ```bash
-   # In your local backend/.env, temporarily use the Neon URL,
-   # then run migrate and seed once:
-   npm run migrate
-   npm run seed
-   ```
-
 ### Frontend → Vercel
 
-1. Go to [vercel.com](https://vercel.com) → New Project → import this repo
-2. Set **Root Directory** to `frontend`
-3. Add environment variable: `VITE_API_URL=https://product-streamer-api.onrender.com`
-4. Deploy. Copy the Vercel URL back into Render's `FRONTEND_URL` env var.
+---
+
+## A few decisions worth mentioning
+
+**Plain `pg` instead of Prisma or Sequelize** — I wanted the SQL to be fully readable. The pagination query is the whole point of this project — it shouldn't be hidden behind ORM magic. With plain `pg`, you can look at `routes/products.js` and see exactly what's being sent to the database.
+
+**Neon pooled connection string** — Neon's free tier limits direct connections. The pooled string goes through PgBouncer which handles connection multiplexing. Easy to miss but important — without it you'll hit connection limit errors under any real load.
+
+**`limit` capped at 100** — A client shouldn't be able to send `?limit=50000` and scan half the table in one request.
+
+**Seed batches of 1000** — Inserting 200k rows one at a time in a loop would take 10+ minutes. Batching them into groups of 1000 per INSERT brings it down to under a minute. The seed script is in `scripts/seed.js` if you want to see how it's structured.
 
 ---
 
-## Key Design Decisions
-
-| Decision | Rationale |
-|----------|-----------|
-| Plain `pg` (not Prisma/Sequelize) | SQL queries are fully visible — you can read and explain every line without "ORM magic" |
-| Keyset over OFFSET | O(log N) at any depth; stable under concurrent writes |
-| Composite cursor `(created_at, id)` | `created_at` alone isn't unique; `id` prevents ambiguity at identical timestamps |
-| Neon pooled connection string | Neon free tier caps direct connections; PgBouncer pooler multiplexes safely |
-| `limit` capped at 100 | Prevents a single request from scanning 10k+ rows and overwhelming the DB |
-| Batched seed inserts (1000/query) | 200 round-trips instead of 200,000 — ~100× faster seeding |
-
----
-
-## GitHub Repo
+## GitHub
 
 [https://github.com/Samvesh/Product-Stream](https://github.com/Samvesh/Product-Stream)
