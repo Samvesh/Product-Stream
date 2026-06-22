@@ -6,19 +6,19 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #0f1117;
-  --bg-card:     #1a1d27;
-  --bg-card-hov: #1f2335;
-  --border:      #2a2d3e;
-  --accent:      #6c63ff;
-  --accent-2:    #a78bfa;
-  --text:        #e2e8f0;
-  --text-muted:  #8892a4;
-  --green:       #34d399;
-  --yellow:      #fbbf24;
-  --red:         #f87171;
+  --bg:          #08090f;
+  --bg-card:     #12131e;
+  --bg-card-hov: #1a1c2e;
+  --border:      #22253b;
+  --accent:      #00f3ff; /* Neon Cyan */
+  --accent-2:    #ff007f; /* Neon Pink */
+  --text:        #f1f5f9;
+  --text-muted:  #707a94;
+  --green:       #00ff66; /* Neon Green */
+  --yellow:      #ffe600; /* Neon Yellow */
+  --red:         #ff3366; /* Neon Red */
   --radius:      12px;
-  --shadow:      0 4px 24px rgba(0,0,0,0.4);
+  --shadow:      0 0 20px rgba(0, 243, 255, 0.15), 0 0 40px rgba(255, 0, 127, 0.1);
 }
 
 html { font-size: 16px; }
@@ -78,9 +78,9 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(108,99,255,0.15);
-  border: 1px solid rgba(108,99,255,0.3);
-  color: var(--accent-2);
+  background: rgba(0, 243, 255, 0.12);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  color: var(--accent);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 4px 10px;
@@ -102,9 +102,14 @@ body {
 .controls {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
   margin-bottom: 28px;
   flex-wrap: wrap;
+}
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .controls-label {
   color: var(--text-muted);
@@ -218,17 +223,17 @@ select:focus {
 }
 
 /* ---------- Category colour map ----------------------------------- */
-.cat-electronics     { background: rgba(99,179,237,0.1); border-color: rgba(99,179,237,0.4); color: #63b3ed; }
-.cat-clothing        { background: rgba(252,129,205,0.1); border-color: rgba(252,129,205,0.4); color: #fc81cd; }
-.cat-home-garden     { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.4); color: #34d399; }
-.cat-sports-outdoors { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.4); color: #fbbf24; }
-.cat-books           { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.4); color: #a78bfa; }
-.cat-toys-games      { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.4); color: #f87171; }
-.cat-health-beauty   { background: rgba(236,72,153,0.1); border-color: rgba(236,72,153,0.4); color: #ec4899; }
-.cat-automotive      { background: rgba(251,146,60,0.1); border-color: rgba(251,146,60,0.4); color: #fb923c; }
-.cat-food-grocery    { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.4); color: #4ade80; }
-.cat-office-supplies { background: rgba(148,163,184,0.1); border-color: rgba(148,163,184,0.4); color: #94a3b8; }
-.cat-default         { background: rgba(108,99,255,0.1); border-color: rgba(108,99,255,0.4); color: var(--accent-2); }
+.cat-electronics     { background: rgba(0, 243, 255, 0.08); border-color: rgba(0, 243, 255, 0.3); color: #00f3ff; }
+.cat-clothing        { background: rgba(255, 0, 127, 0.08); border-color: rgba(255, 0, 127, 0.3); color: #ff007f; }
+.cat-home-garden     { background: rgba(0, 255, 102, 0.08); border-color: rgba(0, 255, 102, 0.3); color: #00ff66; }
+.cat-sports-outdoors { background: rgba(255, 230, 0, 0.08); border-color: rgba(255, 230, 0, 0.3); color: #ffe600; }
+.cat-books           { background: rgba(187, 0, 255, 0.08); border-color: rgba(187, 0, 255, 0.3); color: #bb00ff; }
+.cat-toys-games      { background: rgba(255, 51, 102, 0.08); border-color: rgba(255, 51, 102, 0.3); color: #ff3366; }
+.cat-health-beauty   { background: rgba(255, 0, 255, 0.08); border-color: rgba(255, 0, 255, 0.3); color: #ff00ff; }
+.cat-automotive      { background: rgba(255, 102, 0, 0.08); border-color: rgba(255, 102, 0, 0.3); color: #ff6600; }
+.cat-food-grocery    { background: rgba(0, 255, 204, 0.08); border-color: rgba(0, 255, 204, 0.3); color: #00ffcc; }
+.cat-office-supplies { background: rgba(148, 163, 184, 0.08); border-color: rgba(148, 163, 184, 0.3); color: #94a3b8; }
+.cat-default         { background: rgba(0, 243, 255, 0.08); border-color: rgba(0, 243, 255, 0.3); color: #00f3ff; }
 
 /* ---------- Load more / sentinel ---------------------------------- */
 .load-more-wrap {
